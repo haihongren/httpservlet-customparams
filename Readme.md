@@ -12,7 +12,7 @@ Custom Instrumentation for extracting HTTP request headers and parameters and in
 
   3. Java extensions are typically picked up on-the-fly. If wishing to use that ('hot deploy'), wait a minute or so and then check the logs to see that the extension loaded. 
   4. If you prefer a cold deploy or it doesn't work right with a hot deploy, restart your JVM after adding the JAR and configurations.
-  5. Check your [results](#Results)!
+  5. Check your [results](#results)!
 
 #### Notes
   * To collect the entire Request URL with query parameters, set `custom_request_header_names:` to `URL`.
