@@ -37,14 +37,14 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
 			} catch (Throwable t) {
 				nrLogger.log(Level.SEVERE, "Custom Instrumentation - Error setting up request headers " + t.getMessage());
 			}
-			nrLogger.log(Level.INFO, "Custom Instrumentation - Getting request headers for these following headers");
+			nrLogger.log(Level.FINER, "Custom Instrumentation - Getting request headers for these following headers");
 			for (int i = 0; i < headerNames.length; i++) {
 				String name = headerNames[i];
-				nrLogger.log(Level.INFO, "Custom Instrumentation - adding header name: " + name);
+				nrLogger.log(Level.FINER, "Custom Instrumentation - adding header name: " + name);
 			}
 		} else {
-			nrLogger.log(Level.INFO, "Custom Instrumentation - custom_request_header_names not defined.");
-			nrLogger.log(Level.INFO, "Custom Instrumentation - use \"custom_request_header_names: [comma separated header names]\" in newrelic.yml");
+			nrLogger.log(Level.FINER, "Custom Instrumentation - custom_request_header_names not defined.");
+			nrLogger.log(Level.FINER, "Custom Instrumentation - use \"custom_request_header_names: [comma separated header names]\" in newrelic.yml");
 		}
 		
 		Object paramNameObj = NewRelic.getAgent().getConfig().getValue("custom_request_parameter_names");
@@ -55,14 +55,14 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
 			} catch (Throwable t) {
 				nrLogger.log(Level.SEVERE, "Custom Instrumentation - Error setting up request parameters " + t.getMessage());
 			}
-			nrLogger.log(Level.INFO, "Custom Instrumentation - Getting request parameters for the following parameters ");
+			nrLogger.log(Level.FINER, "Custom Instrumentation - Getting request parameters for the following parameters ");
 			for (int i = 0; i < parameterNames.length; i++) {
 				String name = parameterNames[i];
-				nrLogger.log(Level.INFO, "Custom Instrumentation - adding parameter name: " + name);
+				nrLogger.log(Level.FINER, "Custom Instrumentation - adding parameter name: " + name);
 			}
 		} else {
-			nrLogger.log(Level.INFO, "Custom Instrumentation - custom_request_parameter_names not defined.");
-			nrLogger.log(Level.INFO, "Custom Instrumentation - use \"custom_request_parameter_names: [comma separated parameter names]\" in newrelic.yml");
+			nrLogger.log(Level.FINER, "Custom Instrumentation - custom_request_parameter_names not defined.");
+			nrLogger.log(Level.FINER, "Custom Instrumentation - use \"custom_request_parameter_names: [comma separated parameter names]\" in newrelic.yml");
 		}
 		
 		Object cookieNameObj = NewRelic.getAgent().getConfig().getValue("custom_request_cookie_names");
@@ -73,14 +73,14 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
 			} catch (Throwable t) {
 				nrLogger.log(Level.SEVERE, "Custom Instrumentation - Error setting up request cookies " + t.getMessage());
 			}
-			nrLogger.log(Level.INFO, "Custom Instrumentation - Getting request cookies for the following cookies ");
+			nrLogger.log(Level.FINER, "Custom Instrumentation - Getting request cookies for the following cookies ");
 			for (int i = 0; i < cookieNames.length; i++) {
 				String name = cookieNames[i];
-				nrLogger.log(Level.INFO, "Custom Instrumentation - adding cookie name: " + name);
+				nrLogger.log(Level.FINER, "Custom Instrumentation - adding cookie name: " + name);
 			}
 		} else {
-			nrLogger.log(Level.INFO, "Custom Instrumentation - custom_request_cookie_names not defined.");
-			nrLogger.log(Level.INFO, "Custom Instrumentation - use \"custom_request_cookie_names: [comma separated cookie names]\" in newrelic.yml");
+			nrLogger.log(Level.FINER, "Custom Instrumentation - custom_request_cookie_names not defined.");
+			nrLogger.log(Level.FINER, "Custom Instrumentation - use \"custom_request_cookie_names: [comma separated cookie names]\" in newrelic.yml");
 		}
 	}
 	
@@ -90,10 +90,19 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
 		if (headerNames != null) {
 			for (int i = 0; i < headerNames.length; i++) {
 				String headerName = headerNames[i];
-				String headerValue = request.getHeader(headerName); 
-				if (headerValue != null) {
-					nrLogger.log(Level.FINER, "Custom Instrumentation - Reading request header value " + headerValue);
-					NewRelic.addCustomParameter("request-header-" + headerName, headerValue);
+				if(headerName.equals("URL")) {
+					String requestURL = request.getRequestURL().toString();
+					if(request.getQueryString() != null) {
+						requestURL += "?" + request.getQueryString();
+					}
+					nrLogger.log(Level.FINER, "Custom Instrumentation - Reading request URL value " + requestURL);
+					NewRelic.addCustomParameter("request-URL", requestURL);						
+				} else {
+					String headerValue = request.getHeader(headerName); 
+					if (headerValue != null) {
+						nrLogger.log(Level.FINER, "Custom Instrumentation - Reading request header value " + headerValue);
+						NewRelic.addCustomParameter("request-header-" + headerName, headerValue);
+					}
 				}
 			}
 		}
