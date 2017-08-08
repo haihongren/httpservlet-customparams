@@ -14,7 +14,7 @@ Custom Instrumentation for extracting HTTP request headers and parameters and in
   4. If you prefer a cold deploy or it doesn't work right with a hot deploy, restart your JVM after adding the JAR and configurations.
   5. Check your [results](#results)!
 
-#### Notes
+#### `newrelic.yml` Config Notes
   * To collect the entire Request URL with query parameters, set `custom_request_header_names:` to `URL`.
   * Ensure the indentation is exactly 2 spaces, and within the `common` stanza. A safe bet is to find the `app_name` property and place the properties under that, matching its indentation.
   * If you don't need any of the three categories, leave out or comment out that config line.
