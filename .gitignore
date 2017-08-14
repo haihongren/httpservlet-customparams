@@ -47,3 +47,7 @@ Icon
 .Trashes
 .VolumeIcon.icns
 .com.apple.timemachine.donotpresent
+
+*.pdf
+
+*.zip

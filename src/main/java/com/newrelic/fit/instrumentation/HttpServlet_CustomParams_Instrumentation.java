@@ -26,9 +26,17 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
 	@NewField
 	private static String[] cookieNames = null;
 	
+	@NewField
+	private static String prefix = "";
+	
 	public HttpServlet_CustomParams_Instrumentation() {
 		Logger nrLogger = NewRelic.getAgent().getLogger();
+		
 		Object headerNameObj = NewRelic.getAgent().getConfig().getValue("custom_request_header_names");
+		prefix = NewRelic.getAgent().getConfig().getValue("prefix", "request");
+		if(prefix.equals("blank")) { 
+			prefix = "";
+		}
 		
 		if(headerNameObj != null) {
 			String headerName = (String) headerNameObj;
@@ -87,6 +95,7 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
 	@Trace(dispatcher = true)
 	protected void service(HttpServletRequest request, HttpServletResponse response) {
 		Logger nrLogger = NewRelic.getAgent().getLogger();
+		
 		if (headerNames != null) {
 			for (int i = 0; i < headerNames.length; i++) {
 				String headerName = headerNames[i];
@@ -101,21 +110,27 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
 					String headerValue = request.getHeader(headerName); 
 					if (headerValue != null) {
 						nrLogger.log(Level.FINER, "Custom Instrumentation - Reading request header value " + headerValue);
-						NewRelic.addCustomParameter("request-header-" + headerName, headerValue);
+						if(prefix.isEmpty()) {
+							NewRelic.addCustomParameter(headerName, headerValue);
+						} else {
+							NewRelic.addCustomParameter(prefix + "-" + headerName, headerValue);
+						}
 					}
 				}
 			}
 		}
+		
 		if (parameterNames != null) {
 			for (int i = 0; i < parameterNames.length; i++) {
 				String parameterName = parameterNames[i];
 				String parameterValue = request.getParameter(parameterName); 
 				if (parameterValue != null) {
 					nrLogger.log(Level.FINER, "Custom Instrumentation - Reading request parameter value " + parameterValue);
-					NewRelic.addCustomParameter("request-parameter-" + parameterName, parameterValue);
+					NewRelic.addCustomParameter(prefix + "-" + parameterName, parameterValue);
 				}
 			}
 		}
+		
 		if (cookieNames != null) {
 			Cookie[] cookies = request.getCookies();
 			for (int i = 0; i < cookies.length; i++) {
@@ -127,13 +142,14 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
 							String cookieValue = cookie.getValue();
 							if (cookieValue != null) {
 								nrLogger.log(Level.FINER, "Custom Instrumentation - Reading request cookie value " + cookieValue);
-								NewRelic.addCustomParameter("request-cookie-" + cookieName, cookieValue);
+								NewRelic.addCustomParameter(prefix + "-" + cookieName, cookieValue);
 							}	
 						}	
 					}
 				}
 			}
 		}
+		
 		nrLogger.log(Level.FINER, "Custom Instrumentation - Calling original HttpServlet.service method");
 		Weaver.callOriginal();
 	}
