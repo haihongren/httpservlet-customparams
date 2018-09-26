@@ -1,5 +1,6 @@
 package com.newrelic.fit.instrumentation;
 
+import java.io.IOException;
 import java.util.logging.Level;
 
 import javax.servlet.http.Cookie;
@@ -29,15 +30,20 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
 	@NewField
 	private static String prefix = "";
 	
+	@NewField
+	private static boolean allowRequestWrapper = false;
+	
 	public HttpServlet_CustomParams_Instrumentation() {
 		Logger nrLogger = NewRelic.getAgent().getLogger();
 		
-		Object headerNameObj = NewRelic.getAgent().getConfig().getValue("custom_request_header_names");
-		prefix = NewRelic.getAgent().getConfig().getValue("prefix", "request");
+		prefix = NewRelic.getAgent().getConfig().getValue("prefix", "");
 		if(prefix.equals("blank")) { 
 			prefix = "";
 		}
 		
+		allowRequestWrapper = NewRelic.getAgent().getConfig().getValue("allowRequestWrapper", false);
+		
+		Object headerNameObj = NewRelic.getAgent().getConfig().getValue("custom_request_header_names");
 		if(headerNameObj != null) {
 			String headerName = (String) headerNameObj;
 			try {
@@ -105,28 +111,48 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
 						requestURL += "?" + request.getQueryString();
 					}
 					nrLogger.log(Level.FINER, "Custom Instrumentation - Reading request URL value " + requestURL);
-					NewRelic.addCustomParameter("request-URL", requestURL);						
+					NewRelic.addCustomParameter(prefix + "URL", requestURL);						
 				} else {
 					String headerValue = request.getHeader(headerName); 
 					if (headerValue != null) {
 						nrLogger.log(Level.FINER, "Custom Instrumentation - Reading request header value " + headerValue);
-						if(prefix.isEmpty()) {
-							NewRelic.addCustomParameter(headerName, headerValue);
-						} else {
-							NewRelic.addCustomParameter(prefix + "-" + headerName, headerValue);
-						}
+						NewRelic.addCustomParameter(prefix + headerName, headerValue);
 					}
 				}
 			}
 		}
-		
 		if (parameterNames != null) {
-			for (int i = 0; i < parameterNames.length; i++) {
-				String parameterName = parameterNames[i];
-				String parameterValue = request.getParameter(parameterName); 
-				if (parameterValue != null) {
-					nrLogger.log(Level.FINER, "Custom Instrumentation - Reading request parameter value " + parameterValue);
-					NewRelic.addCustomParameter(prefix + "-" + parameterName, parameterValue);
+			if (request.getMethod().equalsIgnoreCase("POST")) {
+				if  (request.getContentType().equalsIgnoreCase("application/x-www-form-urlencoded")) {
+					if (allowRequestWrapper) {
+						// Introduced for Great American Insurance who send POST data with form content type but really send a JSON that they want to be able to access through request stream later on
+						HttpServletRequest originalRequest = request;
+						try {
+							request = new RequestWrapper((HttpServletRequest) request);
+							nrLogger.log(Level.FINER, "Custom Instrumentation - Created Wrapper Request for downstream code to be able to access request input stream again ");
+						} catch (IOException e) {
+							request = originalRequest;
+						}	
+						originalRequest = null;
+					}
+
+					for (int i = 0; i < parameterNames.length; i++) {
+						String parameterName = parameterNames[i];
+						String parameterValue = request.getParameter(parameterName); 
+						if (parameterValue != null) {
+							nrLogger.log(Level.FINER, "Custom Instrumentation - Reading request parameter value " + parameterValue);
+							NewRelic.addCustomParameter(prefix + parameterName, parameterValue);
+						} 
+					}
+				}
+			} else {
+				for (int i = 0; i < parameterNames.length; i++) {
+					String parameterName = parameterNames[i];
+					String parameterValue = request.getParameter(parameterName); 
+					if (parameterValue != null) {
+						nrLogger.log(Level.FINER, "Custom Instrumentation - Reading request parameter value " + parameterValue);
+						NewRelic.addCustomParameter(prefix + parameterName, parameterValue);
+					} 
 				}
 			}
 		}
@@ -142,7 +168,7 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
 							String cookieValue = cookie.getValue();
 							if (cookieValue != null) {
 								nrLogger.log(Level.FINER, "Custom Instrumentation - Reading request cookie value " + cookieValue);
-								NewRelic.addCustomParameter(prefix + "-" + cookieName, cookieValue);
+								NewRelic.addCustomParameter(prefix + cookieName, cookieValue);
 							}	
 						}	
 					}

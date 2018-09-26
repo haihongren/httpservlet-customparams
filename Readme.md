@@ -14,7 +14,7 @@ Custom Instrumentation for extracting HTTP request headers and parameters and in
   custom_request_parameter_names: myparam1, myparam2, myparam3
   # To set a prefix for the collected attributes
   # Leave blank or set to "blank" to have no prefix.
-  # Default: 'request-'
+  # Default: ''
   prefix: request-
 ```
 
