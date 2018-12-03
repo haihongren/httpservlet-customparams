@@ -134,15 +134,15 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
 							request = originalRequest;
 						}	
 						originalRequest = null;
-					}
-
-					for (int i = 0; i < parameterNames.length; i++) {
-						String parameterName = parameterNames[i];
-						String parameterValue = request.getParameter(parameterName); 
-						if (parameterValue != null) {
-							nrLogger.log(Level.FINER, "Custom Instrumentation - Reading request parameter value " + parameterValue);
-							NewRelic.addCustomParameter(prefix + parameterName, parameterValue);
-						} 
+						
+						for (int i = 0; i < parameterNames.length; i++) {
+							String parameterName = parameterNames[i];
+							String parameterValue = request.getParameter(parameterName); 
+							if (parameterValue != null) {
+								nrLogger.log(Level.FINER, "Custom Instrumentation - Reading request parameter value " + parameterValue);
+								NewRelic.addCustomParameter(prefix + parameterName, parameterValue);
+							} 
+						}
 					}
 				}
 			} else {
