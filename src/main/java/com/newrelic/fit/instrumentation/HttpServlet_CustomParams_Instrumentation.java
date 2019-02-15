@@ -36,8 +36,10 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
 	public HttpServlet_CustomParams_Instrumentation() {
 		Logger nrLogger = NewRelic.getAgent().getLogger();
 		
-		prefix = NewRelic.getAgent().getConfig().getValue("prefix", "");
-		if(prefix.equals("blank")) { 
+		Object prefixParam = NewRelic.getAgent().getConfig().getValue("prefix");
+		if (prefixParam != null) {
+			prefix = (String) prefixParam + "-";
+		} else {
 			prefix = "";
 		}
 		
