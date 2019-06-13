@@ -103,7 +103,6 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
 	@Trace(dispatcher = true)
 	protected void service(HttpServletRequest request, HttpServletResponse response) {
 		Logger nrLogger = NewRelic.getAgent().getLogger();
-		
 		if (headerNames != null) {
 			for (int i = 0; i < headerNames.length; i++) {
 				String headerName = headerNames[i];
@@ -145,7 +144,43 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
 								NewRelic.addCustomParameter(prefix + parameterName, parameterValue);
 							} 
 						}
+					} else {
+						//also add any parameters from query string
+						String queryString = request.getQueryString();
+						
+						if(queryString != null) {
+							String[] queryParameters = queryString.split("&");
+						    for (String queryParameter : queryParameters) {
+						    	nrLogger.log(Level.FINER, "Custom Instrumentation - Reading URL query parameter " + queryParameter);
+								String[] keyValuePair = queryParameter.split("=");
+						        if (keyValuePair.length > 1) {
+						        		for (int i = 0; i < parameterNames.length; i++) {
+						        			if (parameterNames[i].equalsIgnoreCase(keyValuePair[0])) {
+						        				NewRelic.addCustomParameter(prefix + keyValuePair[0], keyValuePair[1]);
+						        			}
+						        		}
+								}
+						    }
+						}
 					}
+				} else {
+					//also add any parameters from query string
+					String queryString = request.getQueryString();
+					
+					if(queryString != null) {
+						String[] queryParameters = queryString.split("&");
+					    for (String queryParameter : queryParameters) {
+					    	nrLogger.log(Level.FINER, "Custom Instrumentation - Reading URL query parameter " + queryParameter);
+							String[] keyValuePair = queryParameter.split("=");
+					        if (keyValuePair.length > 1) {
+					        		for (int i = 0; i < parameterNames.length; i++) {
+					        			if (parameterNames[i].equalsIgnoreCase(keyValuePair[0])) {
+					        				NewRelic.addCustomParameter(prefix + keyValuePair[0], keyValuePair[1]);
+					        			}
+					        		}
+							}
+					    }
+					}	
 				}
 			} else {
 				for (int i = 0; i < parameterNames.length; i++) {
@@ -157,7 +192,7 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
 					} 
 				}
 			}
-		}
+		} 
 		
 		if (cookieNames != null) {
 			Cookie[] cookies = request.getCookies();
