@@ -1,8 +1,8 @@
 apply plugin: 'java'
 apply plugin: 'eclipse'
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
+sourceCompatibility = JavaVersion.VERSION_1_6
+targetCompatibility = JavaVersion.VERSION_1_6
 
 repositories {
    maven {
@@ -14,13 +14,11 @@ repositories {
 }
 
 group = 'com.newrelic.instrumentation'
-version = '1.1'
+version = '1.4'
 
 dependencies {
   	compile fileTree(dir: 'lib', includes: ['*.jar'])
-    implementation "com.newrelic.agent.java:newrelic-api:5.5.0"
-    implementation "com.newrelic.agent.java:newrelic-agent:5.5.0"
-    implementation "org.springframework:spring-web:4.3.3.RELEASE"
+	compile group: 'javax.servlet', name: 'javax.servlet-api', version: '3.0.1'
 }
 
 jar {

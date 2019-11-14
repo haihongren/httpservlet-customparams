@@ -16,4 +16,4 @@ include 'api'
 include 'services:webservice'
 */
 
-rootProject.name = 'sap-hybris-ext-6.4'
+rootProject.name = 'httpservlet-customParams'
