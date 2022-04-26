@@ -1,28 +1,24 @@
 package com.newrelic.fit.instrumentation;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
- 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
- 
+import java.io.*;
+
 /**
  * From: https://howtodoinjava.com/servlets/httpservletrequestwrapper-example-read-request-body/
- * 
- *
  */
 public class RequestWrapper extends HttpServletRequestWrapper {
     private final String body;
- 
-    public RequestWrapper(HttpServletRequest request) throws IOException
-    {
+    private final JSONObject jsonbody;
+    private boolean hasJsonBody=false;
+    public RequestWrapper(HttpServletRequest request) throws IOException {
         //So that other request method behave just like before
         super(request);
-         
+
         StringBuilder stringBuilder = new StringBuilder();
         BufferedReader bufferedReader = null;
         try {
@@ -50,8 +46,9 @@ public class RequestWrapper extends HttpServletRequestWrapper {
         }
         //Store request pody content in 'body' variable
         body = stringBuilder.toString();
+        jsonbody= convertToJson();
     }
- 
+
     @Override
     public ServletInputStream getInputStream() throws IOException {
         final ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(body.getBytes());
@@ -62,14 +59,35 @@ public class RequestWrapper extends HttpServletRequestWrapper {
         };
         return servletInputStream;
     }
- 
+
     @Override
     public BufferedReader getReader() throws IOException {
         return new BufferedReader(new InputStreamReader(this.getInputStream()));
     }
- 
+
     //Use this method to read the request body N times
     public String getBody() {
         return this.body;
+    }
+
+    public JSONObject convertToJson() {
+        JSONObject json;
+        try {
+            json = new JSONObject(this.body);
+            hasJsonBody=true;
+        } catch (JSONException err) {
+            hasJsonBody=false;
+            json = new JSONObject();
+        }
+        return json;
+    }
+    public boolean hasJsonBody(){
+        return hasJsonBody;
+    }
+    public String bodyHasKey(String key) {
+
+        if ( jsonbody.has(key)) {
+            return jsonbody.getString(key);
+        } else return null;
     }
 }
