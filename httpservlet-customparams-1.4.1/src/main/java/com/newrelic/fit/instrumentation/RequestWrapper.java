@@ -90,4 +90,8 @@ public class RequestWrapper extends HttpServletRequestWrapper {
             return jsonbody.getString(key);
         } else return null;
     }
+    public String getJsonBody() {
+
+        return jsonbody.toString();
+    }
 }
