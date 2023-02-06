@@ -1,8 +1,10 @@
 package com.newrelic.fit.instrumentation;
 
+import com.newrelic.agent.bridge.AgentBridge;
 import com.newrelic.api.agent.Logger;
 import com.newrelic.api.agent.NewRelic;
 import com.newrelic.api.agent.Trace;
+import com.newrelic.api.agent.TransactionNamePriority;
 import com.newrelic.api.agent.weaver.MatchType;
 import com.newrelic.api.agent.weaver.NewField;
 import com.newrelic.api.agent.weaver.Weave;
@@ -37,7 +39,19 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
     private static boolean allowRequestBodyScan = false;
 
     @NewField
+    private static boolean allowResponseBodyScan = false;
+
+    @NewField
+    private static boolean isResponseWrapped = false;
+
+    @NewField
     private static String[] bodyNames = null;
+
+    @NewField
+    private static String[] respbodyNames = null;
+
+    @NewField
+    private static boolean SOAPActionAsTransactionName = false;
 
     public HttpServlet_CustomParams_Instrumentation() {
         Logger nrLogger = NewRelic.getAgent().getLogger();
@@ -51,6 +65,8 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
 
         allowRequestWrapper = NewRelic.getAgent().getConfig().getValue("allowRequestWrapper", false);
         allowRequestBodyScan = NewRelic.getAgent().getConfig().getValue("allowRequestBodyScan", false);
+        allowResponseBodyScan = NewRelic.getAgent().getConfig().getValue("allowResponseBodyScan", false);
+        SOAPActionAsTransactionName = NewRelic.getAgent().getConfig().getValue("SOAPActionAsTransactionName", false);
 
         Object headerNameObj = NewRelic.getAgent().getConfig().getValue("custom_request_header_names");
         if (headerNameObj != null) {
@@ -123,6 +139,26 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
             nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - custom_request_body_names not defined.");
             nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - use \"custom_request_body_names: [comma separated body names]\" in newrelic.yml");
         }
+
+        Object respbodyNameObj = NewRelic.getAgent().getConfig().getValue("custom_response_body_names");
+        if (respbodyNameObj != null) {
+            String respbodyname = (String) respbodyNameObj;
+            try {
+                respbodyNames = respbodyname.split("\\s*,\\s*");
+            } catch (Throwable t) {
+                nrLogger.log(Level.SEVERE, "Custom Instrumentation httpServlet - Error setting up response body key value pairs " + t.getMessage());
+            }
+            nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - Search response body for the following keys");
+            for (int i = 0; i < respbodyNames.length; i++) {
+                String name = respbodyNames[i];
+                nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - body key name: " + name);
+            }
+        } else {
+            nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - custom_response_body_names not defined.");
+            nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - use \"custom_response_body_names: [comma separated body names]\" in newrelic.yml");
+        }
+
+
     }
 
     @Trace(dispatcher = true)
@@ -143,6 +179,11 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
                     if (headerValue != null) {
                         nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - Reading request header value " + headerValue);
                         NewRelic.addCustomParameter(prefix + headerName, headerValue);
+                        if ( headerName.equals("SOAPAction") && SOAPActionAsTransactionName ) {
+
+                            AgentBridge.getAgent().getTransaction().setTransactionName(TransactionNamePriority.CUSTOM_HIGH,true, "SOAPWebService",headerValue);
+                            nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - Set transaction name " + headerValue);
+                        }
                     }
                 }
             }
@@ -238,8 +279,10 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
             }
         }
 
-        nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - bodyNames: " + Arrays.toString(bodyNames));
+        nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - requestBodyNames: " + Arrays.toString(bodyNames));
+        nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - responseBodyNames: " + Arrays.toString(respbodyNames));
         nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - allowRequestBodyScan: " + allowRequestBodyScan);
+        nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - allowResponseBodyScan: " + allowResponseBodyScan);
 
         if (bodyNames != null && allowRequestBodyScan) {
             nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - ContentType: " + request.getContentType());
@@ -271,53 +314,36 @@ public abstract class HttpServlet_CustomParams_Instrumentation {
                                 NewRelic.addCustomParameter(prefix + bodyName, bodyValue);
                             }
                         }
-
                     }
-
                 }
         }
 
-
-
-
-        nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - Calling original HttpServlet.service method");
-        response= Weaver.callOriginal();
-
-        if (bodyNames != null && allowRequestBodyScan) {
+        if (respbodyNames != null && allowResponseBodyScan) {
             nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - response ContentType: " + response.getContentType());
-//            if (response.getContentType() !=null && response.getContentType().equalsIgnoreCase("application/json")) {
-            boolean hasJsonbody = false;
             HttpServletResponse originalResponse = response;
             try {
                 response = new ResponseWrapper((HttpServletResponse) response);
-                hasJsonbody = ((ResponseWrapper) response).hasJsonBody();
-                nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - wrapped response successfully" );
-                nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - json body:"+((ResponseWrapper) response).getJsonBody() );
+                isResponseWrapped=true;
+                nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - wrap response SUCCESSFUL" );
             } catch (IOException e) {
                 nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - wrap response FAILED" );
-
                 response = originalResponse;
             }
-            nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - is response body json format: " + hasJsonbody);
-            nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - response body json: " + hasJsonbody);
-            originalResponse = null;
-
-            if (hasJsonbody) {
-                for (int i = 0; i < bodyNames.length; i++) {
-                    String bodyName = bodyNames[i];
-                    String bodyValue = ((ResponseWrapper) response).bodyHasKey(bodyName);
-                    if (bodyValue != null) {
-                        nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - Reading response body value " + bodyValue);
-                        nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - Added custom attribute: " + bodyName+":"+ bodyValue);
-
-                        NewRelic.addCustomParameter(prefix + bodyName, bodyValue);
-                    }
-                }
-
-            }
-
-//            }
         }
 
+        nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - Calling original HttpServlet.service method");
+        Weaver.callOriginal();
+
+        if (isResponseWrapped && (response.getContentType() != null && request.getContentType().equalsIgnoreCase("application/json"))) {
+            ResponseWrapper responseCopier = (ResponseWrapper) response;
+            for (int i = 0; i < respbodyNames.length; i++) {
+                String bodyName = respbodyNames[i];
+                String bodyValue = responseCopier.bodyHasKey(bodyName);
+                if (bodyValue != null) {
+                    nrLogger.log(Level.FINER, "Custom Instrumentation httpServlet - Added custom attribute: " + bodyName + ":" + bodyValue);
+                    NewRelic.addCustomParameter(prefix + bodyName, bodyValue);
+                }
+            }
+        }
     }
 }

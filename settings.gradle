@@ -17,4 +17,4 @@ include 'services:webservice'
 */
 
 rootProject.name = 'httpservlet-customParams'
-include 'httpservlet-customparams-1.4.1'
+include 'httpservlet-customparams-1.4.2'
